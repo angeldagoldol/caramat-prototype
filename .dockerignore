@@ -1,0 +1,7 @@
+target/
+.git/
+deliverables/
+assets/screenshots/
+tests/
+.pytest_cache/
+__pycache__/

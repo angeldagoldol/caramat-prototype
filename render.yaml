@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: online-scholarship-application-system
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/queue

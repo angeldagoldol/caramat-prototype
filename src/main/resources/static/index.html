@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Online Scholarship Application System</title>
+<meta name="description" content="A scholarship application queue ordered by a binary max-heap priority queue.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="masthead">
+  <div class="shell masthead__inner">
+    <div>
+      <p class="masthead__eyebrow">St. John Paul II College of Davao &middot; CICT</p>
+      <h1 class="masthead__title">Online Scholarship Application System</h1>
+      <p class="masthead__subtitle">
+        Applications are held in a binary max-heap priority queue. The highest merit score is always
+        at the root, so awarding a slot is one <code>extractMax</code> and never a re-sort.
+      </p>
+    </div>
+    <dl class="slot-meter" aria-label="Scholarship slot summary">
+      <div><dt>Slots remaining</dt><dd id="slots-remaining">&mdash;</dd></div>
+      <div><dt>Waiting in queue</dt><dd id="waiting-count">&mdash;</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main id="main" class="shell layout">
+
+  <section class="panel" aria-labelledby="form-heading">
+    <h2 id="form-heading" class="panel__title">Submit an application</h2>
+    <form id="application-form" novalidate>
+      <div class="field">
+        <label for="name">Applicant name</label>
+        <input id="name" name="name" type="text" maxlength="80" autocomplete="name" required>
+        <p class="field__error" id="name-error" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="program">Degree program</label>
+        <input id="program" name="program" type="text" maxlength="80" list="program-options" required>
+        <datalist id="program-options">
+          <option value="BS Information Technology"></option>
+          <option value="BS Computer Science"></option>
+          <option value="BS Information Systems"></option>
+          <option value="BS Computer Engineering"></option>
+        </datalist>
+        <p class="field__error" id="program-error" hidden></p>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="gwa">General weighted average</label>
+          <input id="gwa" name="gwa" type="number" min="1" max="5" step="0.01" inputmode="decimal" required>
+          <p class="field__hint">1.00 is highest. 60 points maximum.</p>
+          <p class="field__error" id="gwa-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="monthlyIncome">Monthly household income</label>
+          <input id="monthlyIncome" name="monthlyIncome" type="number" min="0" max="1000000" step="100" inputmode="numeric" required>
+          <p class="field__hint">In pesos. Lower income scores higher. 30 points maximum.</p>
+          <p class="field__error" id="monthlyIncome-error" hidden></p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="unitsEnrolled">Units enrolled this term</label>
+        <input id="unitsEnrolled" name="unitsEnrolled" type="number" min="1" max="36" step="1" inputmode="numeric" required>
+        <p class="field__hint">24 units or more earns the full 10 points.</p>
+        <p class="field__error" id="unitsEnrolled-error" hidden></p>
+      </div>
+
+      <div class="actions">
+        <button class="button button--primary" type="submit">Add to queue</button>
+        <button class="button" type="button" id="sample-button">Load sample set</button>
+        <button class="button button--quiet" type="button" id="reset-button">Clear queue</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="status-heading">
+    <h2 id="status-heading" class="panel__title">Queue status</h2>
+    <p id="status-message" class="status" role="status" aria-live="polite">
+      The queue is empty. Add an application or load the sample set.
+    </p>
+
+    <div id="operation-card" class="operation" hidden>
+      <h3 class="operation__title">Last heap operation</h3>
+      <dl class="operation__stats">
+        <div><dt>Operation</dt><dd id="op-name">&mdash;</dd></div>
+        <div><dt>Comparisons</dt><dd id="op-comparisons">&mdash;</dd></div>
+        <div><dt>Swaps</dt><dd id="op-swaps">&mdash;</dd></div>
+        <div><dt>Tree height</dt><dd id="op-height">&mdash;</dd></div>
+      </dl>
+      <ol id="op-steps" class="operation__steps"></ol>
+      <p id="op-empty" class="operation__none" hidden>
+        No swap was needed. The heap property already held.
+      </p>
+    </div>
+
+    <div class="next-up">
+      <h3 class="next-up__title">Next in line <span class="badge">heap index 0</span></h3>
+      <div id="next-card" class="next-card next-card--empty">Nothing is waiting.</div>
+      <button class="button button--primary button--wide" type="button" id="award-button" disabled>
+        Award next scholarship slot
+      </button>
+    </div>
+  </section>
+
+  <section class="panel panel--wide" aria-labelledby="heap-heading">
+    <h2 id="heap-heading" class="panel__title">The heap itself</h2>
+    <p class="panel__lead">
+      The array below is the live backing store, in level order. A parent at index <code>i</code> keeps
+      its children at <code>2i+1</code> and <code>2i+2</code>, and every parent outranks both children.
+      The array is deliberately not sorted &mdash; only the root is guaranteed to be the maximum.
+    </p>
+    <dl class="heap-stats">
+      <div><dt>Array capacity</dt><dd id="heap-capacity">&mdash;</dd></div>
+      <div><dt>Elements stored</dt><dd id="heap-size">&mdash;</dd></div>
+      <div><dt>Tree height</dt><dd id="heap-height">&mdash;</dd></div>
+      <div><dt>Heap property</dt><dd id="heap-valid">&mdash;</dd></div>
+    </dl>
+    <div id="heap-tree" class="heap-tree" aria-label="Binary max-heap as a tree"></div>
+    <div class="table-scroll">
+      <table class="table">
+        <caption class="visually-hidden">Backing array in level order</caption>
+        <thead>
+          <tr><th scope="col">Index</th><th scope="col">Parent</th><th scope="col">Applicant</th><th scope="col">Merit</th></tr>
+        </thead>
+        <tbody id="heap-array-body"></tbody>
+      </table>
+      <p id="heap-array-empty" class="empty-note">The backing array is empty.</p>
+    </div>
+  </section>
+
+  <section class="panel panel--wide" aria-labelledby="ranked-heading">
+    <h2 id="ranked-heading" class="panel__title">Waiting applicants, ranked</h2>
+    <p class="panel__lead">
+      This ranking is produced by a heap sort over a copy of the array, so reading it never disturbs
+      the live queue. Applicants with identical merit scores are ordered by who applied first.
+    </p>
+    <div class="table-scroll">
+      <table class="table">
+        <caption class="visually-hidden">Waiting applicants ordered by merit score</caption>
+        <thead>
+          <tr>
+            <th scope="col">Rank</th><th scope="col">Reference</th><th scope="col">Applicant</th>
+            <th scope="col">Program</th><th scope="col">GWA</th><th scope="col">Income</th>
+            <th scope="col">Units</th><th scope="col">Academic</th><th scope="col">Need</th>
+            <th scope="col">Load</th><th scope="col">Merit</th>
+          </tr>
+        </thead>
+        <tbody id="ranked-body"></tbody>
+      </table>
+      <p id="ranked-empty" class="empty-note">No applications are waiting.</p>
+    </div>
+  </section>
+
+  <section class="panel panel--wide" aria-labelledby="awarded-heading">
+    <h2 id="awarded-heading" class="panel__title">Awarded slots</h2>
+    <div class="table-scroll">
+      <table class="table">
+        <caption class="visually-hidden">Scholarship slots already granted</caption>
+        <thead>
+          <tr>
+            <th scope="col">Slot</th><th scope="col">Reference</th><th scope="col">Applicant</th>
+            <th scope="col">Program</th><th scope="col">Merit</th>
+          </tr>
+        </thead>
+        <tbody id="awarded-body"></tbody>
+      </table>
+      <p id="awarded-empty" class="empty-note">No slots have been awarded yet.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <p>
+      CC104 &mdash; Data Structures and Algorithms &middot; Mini-System Project prototype.
+      Applications are held in memory only and reset when the Java process restarts.
+    </p>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

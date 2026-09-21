@@ -1,0 +1,12 @@
+target/
+rendered/
+.pytest_cache/
+__pycache__/
+*.pyc
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+node_modules/

@@ -1,0 +1,9 @@
+{
+  "name": "online-scholarship-application-system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:frontend": "node --test src/test/frontend/*.test.js",
+    "test:smoke": "node scripts/smoke-test.mjs"
+  }
+}
